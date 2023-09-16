@@ -86,8 +86,8 @@
     #define ETHERNET_PRINT
     //#define PIN_LED_INVERSE           // use this setting for the LED_BUILTIN on WEMOS boards
   #elif defined(ESP32)
-    #define PIN_RECEIVE          13   // D13 | G13 (depending on type / clone / seller) --> old 16, not good (serial) and not all boards n.c.
-    #define PIN_LED              2    // D2  | G2 (depending on type / clone / seller)
+    #define PIN_RECEIVE          36   // D13 | G13 (depending on type / clone / seller) --> old 16, not good (serial) and not all boards n.c.
+    #define PIN_LED              3    // D2  | G2 (depending on type / clone / seller)
     #define PIN_SEND             4    // D4  | G4 (depending on type / clone / seller) // GDO0 Pin TX out
     #define ETHERNET_PRINT
   #else
