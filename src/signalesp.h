@@ -13,7 +13,6 @@
 #define S_ssidpre               "SIGNALESP"
 
 #define ETHERNET_PRINT
-#define WIFI_MANAGER_OVERRIDE_STRINGS
 
 // EEProm Addresscommands
 #define EE_MAGIC_OFFSET        0
@@ -46,7 +45,7 @@ void IRAM_ATTR sosBlink(void *pArg);
 #if defined(ESP32)
   #include "esp_timer.h"
   #include "esp_task_wdt.h"
-  #include <WiFi.h>
+  #include <ETH.h>
   #include <WiFiType.h>
 #endif
 
@@ -70,9 +69,6 @@ SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 #include "functions.h"
 #include "send.h"
 #include "FastDelegate.h"
-#define WIFI_MANAGER_OVERRIDE_STRINGS
-#include "wifi-config.h"
-#include "WiFiManager.h"           // https://github.com/tzapu/WiFiManager
 
 
 WiFiServer Server(23);             //  port 23 = telnet
@@ -124,14 +120,11 @@ void IRAM_ATTR sosBlink (void *pArg) {
 }
 
 
-
-WiFiManager wifiManager;
-
 #ifdef ESP8266
   WiFiEventHandler gotIpEventHandler, disconnectedEventHandler;
 #endif
 
-void restart(){
+void restart() {
   ESP.restart();
 }
 
@@ -155,17 +148,39 @@ void setup() {
   });
   // added @Dattel #130 - END
 #elif defined(ESP32)
-  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-    Server.begin();  // start telnet server
-    Server.setNoDelay(true);
-  }, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_CONNECTED);
+  WiFi.onEvent([](WiFiEvent_t event) {
+    switch (event)
+    {
+      case WiFiEvent_t::ARDUINO_EVENT_ETH_CONNECTED:
+        Serial.println("Network connection established.");
+        Server.begin();  // start telnet server
+        Server.setNoDelay(true);
+        break;
 
-  WiFi.onEvent([](WiFiEvent_t event, WiFiEventInfo_t info) {
-    Server.stop();  // end telnet server
-    Serial.print("WiFi lost connection. Reason: ");
-    Serial.println(info.wps_fail_reason);
-    
-  }, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+      case WiFiEvent_t::ARDUINO_EVENT_ETH_GOT_IP:
+        Serial.print("ETH MAC: ");
+        Serial.print(ETH.macAddress());
+        Serial.print(", IPv4: ");
+        Serial.print(ETH.localIP());
+        if (ETH.fullDuplex()) {
+          Serial.print(", FULL_DUPLEX");
+        }
+        Serial.print(", ");
+        Serial.print(ETH.linkSpeed());
+        Serial.println("Mbps");
+        break;
+
+      case WiFiEvent_t::ARDUINO_EVENT_ETH_DISCONNECTED:
+        Serial.println("Network connection disconnected.");
+        Server.stop();  // end telnet server
+        break;
+
+      case WiFiEvent_t::ARDUINO_EVENT_ETH_STOP:
+        Serial.println("Ethernet stopped.");
+        Server.stop();  // end telnet server
+        break;
+    }
+  });
 #endif
 
 //ESP.wdtEnable(2000);
@@ -181,8 +196,6 @@ void setup() {
   os_timer_arm(&blinksos, 300, true);
 #endif
 
-//WiFi.setAutoConnect(false);
-  WiFi.mode(WIFI_STA);
 
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -215,8 +228,6 @@ initEEPROM();
   }
 #endif 
 
-wifiManager.setShowStaticFields(true);
-// wifiManager.setCountry("US");
 
 /*
 		1. starts a config portal in access point mode (timeout 60 seconds)
@@ -297,8 +308,7 @@ IPAddress _ip, _gw, _sn;
 
 	//bool wps_successfull=false;
 Serial.println("Starting config portal with SSID: SignalESP");
-wifiManager.setConfigPortalTimeout(120);
-wifiManager.setConfigPortalTimeoutCallback(restart);
+
 	/*
 	if (!wifiManager.startConfigPortal("NodeDuinoConfig", NULL)) {
 
@@ -341,9 +351,6 @@ wifiManager.setConfigPortalTimeoutCallback(restart);
 		}
 	}
 	*/
-wifiManager.setConnectTimeout(60);
-
-wifiManager.autoConnect("SignalESP",NULL);
 
 	/*
 	if (shouldSaveConfig)
@@ -398,6 +405,31 @@ wifiManager.autoConnect("SignalESP",NULL);
 	}
 	*/
 
+  // Settings for Olimex esp32-poe:
+  // type: LAN8720
+  // mdc_pin: GPIO23
+  // mdio_pin: GPIO18
+  // clk_mode: GPIO17_OUT
+  // phy_addr: 0
+  // power_pin: GPIO12
+  Serial.println("ETH.begin()");
+  if (ETH.begin(0, 12, 23, 18, eth_phy_type_t::ETH_PHY_LAN8720, eth_clock_mode_t::ETH_CLOCK_GPIO17_OUT))
+  {
+    Serial.println("ETH.config()");
+    if (ETH.config(IPAddress(192, 168, 0, 14), IPAddress(192, 168, 0, 1), IPAddress(255, 255, 255, 0), IPAddress(192, 168, 0, 1)))
+    {
+      Serial.println("ETH.config() successful");
+    }
+    else
+    {
+      Serial.println("ETH.config() failed!");
+    }
+  }
+  else
+  {
+    Serial.println("ETH.begin() failed!!");
+  }
+
 #ifdef ESP32
   cronTimer_args.callback = cronjob;
   cronTimer_args.name = "cronTimer";
@@ -425,11 +457,7 @@ musterDec.setStreamCallback(writeCallback);
 #endif
 
 MSG_PRINTER.setTimeout(400);
-
-//	WiFi.mode(WIFI_STA);
-  wifiManager.setConfigPortalBlocking( false);
-//	wifiManager.startConfigPortal();
-  wifiManager.startWebPortal();
+  
 #ifdef ESP32
   esp_timer_start_periodic(cronTimer_handle, 31000);
   esp_timer_stop(blinksos_handle);
@@ -491,8 +519,6 @@ void IRAM_ATTR cronjob(void *pArg) {
 
 
 void loop() {
-  wifiManager.process();
-
   static int aktVal = 0;
   bool state;
   serialEvent();
