@@ -288,6 +288,30 @@ void send_cmd()
     */
 		repeats = command[0].repeats;
 	}
+
+	/* Enable this to dump the sent commands:
+	for (uint8_t i = 0; i < repeats; i++)
+	{
+		Serial.println("---------------------");
+		Serial.printf("REPEAT %d:\n", i);
+
+        for (uint8_t c = 0; c <= cmdNo; c++)
+        {
+          Serial.printf("command %d:\n", c);
+          char buf[200] = {0};
+		  strncpy(buf, command[c].datastart, command[c].dataend - command[c].datastart);
+		  Serial.printf("	.sendclock  =%d\n", command[c].sendclock);
+		  Serial.printf("	.type       =%d\n", command[c].type);
+		  Serial.printf("	.repeats    =%d\n", command[c].repeats);
+		  Serial.printf("	.data       =%s\n", buf);
+		  for (int b = 0; b < maxNumPattern; ++b) 
+		  {
+			Serial.printf("	.buckets[%d]    =%d\n", b, command[c].buckets[b]);
+		  }
+		}
+	}
+	*/
+
 	for (uint8_t i = 0; i < repeats; i++)
 	{
 		DBG_PRINT(F("msg ")); DBG_PRINT(i + 1); DBG_PRINT('/'); DBG_PRINT(repeats);
