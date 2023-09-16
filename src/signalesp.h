@@ -413,10 +413,10 @@ Serial.println("Starting config portal with SSID: SignalESP");
   // phy_addr: 0
   // power_pin: GPIO12
   Serial.println("ETH.begin()");
-  if (ETH.begin(0, 12, 23, 18, eth_phy_type_t::ETH_PHY_LAN8720, eth_clock_mode_t::ETH_CLOCK_GPIO17_OUT))
+  if (ETH.begin())
   {
     Serial.println("ETH.config()");
-    if (ETH.config(IPAddress(192, 168, 0, 14), IPAddress(192, 168, 0, 1), IPAddress(255, 255, 255, 0), IPAddress(192, 168, 0, 1)))
+    if (ETH.config(DEVICE_IP_ADDRESS, GATEWAY_IP_ADDRESS, SUBNET_MASK, DNS1_SERVER))
     {
       Serial.println("ETH.config() successful");
     }

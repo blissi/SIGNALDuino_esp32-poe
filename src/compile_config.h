@@ -3,6 +3,14 @@
 #ifndef _COMPILE_CONFIG_h
 #define _COMPILE_CONFIG_h
 
+
+// Set up IP configuration here:
+#define DEVICE_IP_ADDRESS   IPAddress(192, 168, 0, 14)
+#define GATEWAY_IP_ADDRESS  IPAddress(192, 168, 0, 1)
+#define SUBNET_MASK         IPAddress(255, 255, 255, 0)
+#define DNS1_SERVER         IPAddress(192, 168, 0, 1)
+
+
 /*
  * Config flags for compiling correct options / boards Define only one!
  * ********************************************************************
